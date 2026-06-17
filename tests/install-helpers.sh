@@ -29,3 +29,7 @@ assert_file_absent() {  # file [name]
   if [ ! -f "$1" ]; then echo "  PASS: ${2:-$1 已不存在}"; TEST_PASS=$((TEST_PASS+1))
   else echo "  FAIL: ${2:-$1 仍存在}"; TEST_FAIL=$((TEST_FAIL+1)); fi
 }
+assert_not_contains() {  # file pattern [name]
+  if grep -q "$2" "$1" 2>/dev/null; then echo "  FAIL: ${3:-$1 仍含 $2}"; TEST_FAIL=$((TEST_FAIL+1))
+  else echo "  PASS: ${3:-$1 不含 $2}"; TEST_PASS=$((TEST_PASS+1)); fi
+}

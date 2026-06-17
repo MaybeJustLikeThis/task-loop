@@ -30,4 +30,16 @@ assert_file_contains "$ROOT/.gitignore" "*.log"                     "用户 giti
 assert_file_contains "$ROOT/.gitignore" ".ai/task.json"             "task-loop gitignore 追加"
 rm -rf "$ROOT"
 
+# 边界1: 已装 → 拒绝重复
+ROOT=$(make_fake_project)
+bash install.sh "$ROOT" >/dev/null 2>&1
+bash install.sh "$ROOT" 2>/dev/null; assert_eq "$?" "1" "已装时重复 install 拒绝"
+rm -rf "$ROOT"
+# 边界2: settings.json 损坏 → 拒绝、不覆盖
+ROOT=$(make_fake_project); mkdir -p "$ROOT/.claude"
+echo "{这不是 json" > "$ROOT/.claude/settings.json"
+bash install.sh "$ROOT" 2>/dev/null; assert_eq "$?" "1" "损坏 settings.json 时拒绝"
+assert_file_contains "$ROOT/.claude/settings.json" "这不是 json" "损坏文件未被覆盖"
+rm -rf "$ROOT"
+
 summary
