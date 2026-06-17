@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 set -uo pipefail
 # task-loop 安装脚本。用法: bash install.sh [target_project_root]
-# 默认装到当前目录；给参数则装到该目录。
 
-HERE="$(cd "$(dirname "$0")" && pwd)"          # task-loop 仓库根
+HERE="$(cd "$(dirname "$0")" && pwd)"
 TARGET="${1:-$PWD}"
 SRC="$HERE/src"
 
@@ -25,6 +24,16 @@ mkdir -p "$TARGET/.claude/hooks" "$TARGET/.claude/scripts" "$TARGET/.claude/comm
 cp "$SRC/hooks/"*.sh "$TARGET/.claude/hooks/"
 cp "$SRC/scripts/"*.sh "$TARGET/.claude/scripts/"
 cp "$SRC/commands/"*.md "$TARGET/.claude/commands/"
+
+# 8. 先写 manifest（创建，flags=false），下面的合并函数再把 flags 设 true
+FILES=(
+  .claude/hooks/guardian.sh
+  .claude/scripts/lib-state.sh .claude/scripts/task-lock.sh
+  .claude/scripts/task-build.sh .claude/scripts/task-close.sh .claude/scripts/task-extend.sh
+  .claude/commands/lock.md .claude/commands/build.md
+  .claude/commands/close.md .claude/commands/extend.md
+)
+manifest_write "$TARGET" "1.0" "${FILES[@]}"
 
 # 5. 合并 settings.json（保留用户已有配置，追加 guardian hook，去重）
 merge_settings() {
@@ -48,7 +57,7 @@ merge_settings "$TARGET"
 append_claudemd() {
   local target="$1/CLAUDE.md"
   if grep -q '<!-- task-loop:start -->' "$target" 2>/dev/null; then
-    : # 已有标记，跳过
+    :
   else
     { [ -f "$target" ] && cat "$target" || true; cat "$SRC/claudemd-section.md"; } > "$target.tmp" && mv "$target.tmp" "$target"
   fi
@@ -67,16 +76,6 @@ append_gitignore() {
   manifest_set_flag "$TARGET" appended_gitignore true
 }
 append_gitignore "$TARGET"
-
-# 8. 写 manifest
-FILES=(
-  .claude/hooks/guardian.sh
-  .claude/scripts/lib-state.sh .claude/scripts/task-lock.sh
-  .claude/scripts/task-build.sh .claude/scripts/task-close.sh .claude/scripts/task-extend.sh
-  .claude/commands/lock.md .claude/commands/build.md
-  .claude/commands/close.md .claude/commands/extend.md
-)
-manifest_write "$TARGET" "1.0" "${FILES[@]}"
 
 # 9. 提示
 echo "task-loop 已装到 $TARGET"

@@ -5,7 +5,7 @@ set -uo pipefail
 # 不强制尾斜杠规范化: extra_grants 既可能是目录(src/util/)也可能是具体文件
 # (src/util/helper.go)，强制加斜杠会让文件前缀匹配失效。路径形式由用户负责。
 cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-source .claude/scripts/lib-state.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib-state.sh"
 TF=".ai/task.json"
 
 [ -f "$TF" ] || { echo "无活动任务。" >&2; exit 1; }

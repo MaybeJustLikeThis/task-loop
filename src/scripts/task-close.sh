@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-source .claude/scripts/lib-state.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib-state.sh"
 TF=".ai/task.json"
 
 [ -f "$TF" ] || { echo "无活动任务，先 /lock。" >&2; exit 1; }

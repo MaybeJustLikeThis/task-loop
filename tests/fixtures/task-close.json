@@ -1,0 +1,7 @@
+{
+  "task_id": "TASK-20260617-test",
+  "stage": "CLOSE",
+  "human_owner": "tester",
+  "scope": { "allowed_paths": ["src/pay/refund/"], "blocked_paths": ["src/auth/"], "extra_grants": [] },
+  "gate": { "plan_confirmed": true, "pre_committed": true, "tests_passed": true, "review_done": true, "post_committed": false }
+}
