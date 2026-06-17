@@ -1,0 +1,6 @@
+.ai/task.json
+.ai/.task-loop-manifest
+.ai/memory/draft/*
+!.ai/memory/draft/.gitkeep
+.ai/memory/active/*
+!.ai/memory/active/.gitkeep
