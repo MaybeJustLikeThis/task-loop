@@ -18,17 +18,57 @@ if [ -f "$TARGET/.ai/.task-loop-manifest" ]; then
   exit 1
 fi
 
+source "$SRC/manifest.sh"
+
 # 4. 拷 src/ → 目标 .claude/
 mkdir -p "$TARGET/.claude/hooks" "$TARGET/.claude/scripts" "$TARGET/.claude/commands"
 cp "$SRC/hooks/"*.sh "$TARGET/.claude/hooks/"
 cp "$SRC/scripts/"*.sh "$TARGET/.claude/scripts/"
 cp "$SRC/commands/"*.md "$TARGET/.claude/commands/"
 
-# 5-6. settings.json/CLAUDE.md/.gitignore 合并 —— Task 5/6 接入
-# （占位：此处后续插入 merge_settings / append_claudemd / append_gitignore）
+# 5. 合并 settings.json（保留用户已有配置，追加 guardian hook，去重）
+merge_settings() {
+  local target="$1/.claude/settings.json"
+  if [ ! -f "$target" ]; then
+    cp "$SRC/settings-hook.json" "$target"
+  else
+    jq empty "$target" 2>/dev/null || { echo "install: $target 不是合法 JSON，拒绝覆盖" >&2; exit 1; }
+    local tmp; tmp=$(mktemp)
+    jq --slurpfile hook "$SRC/settings-hook.json" '
+      ($hook[0].hooks.PreToolUse // []) as $add |
+      if (.hooks.PreToolUse // [] | map(.hooks[].command) | any(test("guardian.sh")))
+      then . else .hooks.PreToolUse = ((.hooks.PreToolUse // []) + $add) end
+    ' "$target" > "$tmp" && mv "$tmp" "$target"
+  fi
+  manifest_set_flag "$TARGET" merged_settings_json true
+}
+merge_settings "$TARGET"
+
+# 6. 追加 CLAUDE.md 标记块（幂等：已有标记则跳过）
+append_claudemd() {
+  local target="$1/CLAUDE.md"
+  if grep -q '<!-- task-loop:start -->' "$target" 2>/dev/null; then
+    : # 已有标记，跳过
+  else
+    { [ -f "$target" ] && cat "$target" || true; cat "$SRC/claudemd-section.md"; } > "$target.tmp" && mv "$target.tmp" "$target"
+  fi
+  manifest_set_flag "$TARGET" appended_claudemd true
+}
+append_claudemd "$TARGET"
+
+# 7. 追加 .gitignore（逐行去重）
+append_gitignore() {
+  local target="$1/.gitignore"
+  touch "$target"
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    grep -qxF -- "$line" "$target" || echo "$line" >> "$target"
+  done < "$SRC/gitignore-lines.txt"
+  manifest_set_flag "$TARGET" appended_gitignore true
+}
+append_gitignore "$TARGET"
 
 # 8. 写 manifest
-source "$SRC/manifest.sh"
 FILES=(
   .claude/hooks/guardian.sh
   .claude/scripts/lib-state.sh .claude/scripts/task-lock.sh
